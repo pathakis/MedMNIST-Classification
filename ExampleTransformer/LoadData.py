@@ -1,5 +1,9 @@
 from medmnist import PneumoniaMNIST, RetinaMNIST
 import pickle, os
+import numpy as np
+import pandas as pd
+import sklearn, torch
+import tensorflow as tf
 
 class DataSet:
     def __init__(self, datasetMNIST):
@@ -47,3 +51,18 @@ def LoadData(filename):
         dataset = pickle.load(file)
     print(f"Data loaded from '{path}'.")
     return dataset
+
+def GPUAccessTest():
+    # Check for TensorFlow GPU access
+    print(f"TensorFlow has access to the following devices:\n{tf.config.list_physical_devices()}")
+    # See TensorFlow version
+    print(f"TensorFlow version: {tf.__version__}")
+    print(f'Pytorch version', torch.__version__)
+    print(f'Is MPS built? {torch.backends.mps.is_built()}')
+    print(f'Is MPS available? {torch.backends.mps.is_available()}')
+
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    print(f'Using device: {device}')
+
+
+
