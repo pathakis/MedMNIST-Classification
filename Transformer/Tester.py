@@ -1,6 +1,11 @@
+# Written by Oscar Rosman
+# Date: 2024-04-24
+# Program to test the ViT model and its components.
+
+from Library import *
 from ViT import *
-import torch
-import tensorflow as tf
+from Optimiser import *
+from medmnist import PneumoniaMNIST, RetinaMNIST, ChestMNIST
 
 def RunViT_Test():
     # Test normalisation class / layer
@@ -56,3 +61,14 @@ def GPUAccessTest():
 
     x = torch.rand(size=(3,4)).to(device)
     print(f" > Tensor: {x}")
+
+def RunOptimisationTest(dataset, epochs=1):
+    '''
+    Test the ViT optimiser class.
+    '''
+    optimiser = ViT_Optimiser(dataset, epochs)
+    optimiser.RunOptimiser(epochs, title=str(dataset.__name__))
+
+RunOptimisationTest(PneumoniaMNIST, 1)
+RunOptimisationTest(RetinaMNIST, 1)
+RunOptimisationTest(ChestMNIST, 1)

@@ -1,17 +1,11 @@
 # Written by Oscar Rosman
 # Date: 2024-04-24
 
-from einops import rearrange
 from torch import nn
 from einops.layers.torch import Rearrange
 from torch import Tensor
 import torch
-import matplotlib.pyplot as plt
-from random import random
-from torchvision.transforms import Resize, ToTensor
-from torchvision.transforms.functional import to_pil_image
 from einops import repeat
-from medmnist import PneumoniaMNIST
 
 class Attention(nn.Module):
     def __init__(self, dim, heads, dropout):
