@@ -57,4 +57,3 @@ def GPUAccessTest():
     x = torch.rand(size=(3,4)).to(device)
     print(f" > Tensor: {x}")
 
-GPUAccessTest()
