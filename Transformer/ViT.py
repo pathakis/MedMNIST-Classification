@@ -1,3 +1,6 @@
+# Written by Oscar Rosman
+# Date: 2024-04-24
+
 from einops import rearrange
 from torch import nn
 from einops.layers.torch import Rearrange
@@ -52,6 +55,7 @@ class Compose(object):
             image = t(image)
         return image
 
+
 class PreNorm(nn.Module):
     def __init__(self, dim, fn):
         super().__init__()
@@ -81,9 +85,10 @@ class ResidualAdd(nn.Module):
         x = self.fn(x, **kwargs)
         x += res
         return x
-    
+
+
 class ViT(nn.Module):
-    def __init__(self, channels, 
+    def __init__(self, channels=3, 
                  img_size=224, 
                  patch_size=4, 
                  embedding_dim=32, 
@@ -102,19 +107,42 @@ class ViT(nn.Module):
         self.n_layers = layers
 
         # Patching
-        #self.patch_embedding = Pat
+        self.patch_embedding = PatchEmbedding(in_channels=channels,
+                                              patch_size=patch_size,
+                                              embedding_size=embedding_dim
+                                              )
+        
+        # Learnable parameters
+        num_patches = (img_size // patch_size) ** 2
+        self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, embedding_dim))
+        self.cls_token = nn.Parameter(torch.randn(1, 1, embedding_dim))
 
-norm = PreNorm(64, Attention(64, 8, 0.1))
-print(norm(torch.ones(10, 64, 64)).shape)
-ff = FeedForward(64, 128)
-print(ff(torch.ones(10, 64, 64)).shape)
-residual_att = ResidualAdd(Attention(64, 8, 0.))
-print(residual_att(torch.ones(10, 64, 64)).shape)
+        # Transformer encoder
+        self.layers = nn.ModuleList([])
+        for _ in range(layers):
+            transformer_block = nn.Sequential(
+                ResidualAdd(PreNorm(embedding_dim, Attention(embedding_dim, heads, dropout))),
+                ResidualAdd(PreNorm(embedding_dim, FeedForward(embedding_dim, embedding_dim, dropout)))
+            )
+            self.layers.append(transformer_block)
 
-to_tensor = [Resize((28, 28)), ToTensor()]
-dataset = PneumoniaMNIST(split='train', download=True, transform=Compose(to_tensor))
-sample_datapoint = torch.unsqueeze(dataset[0][0], 0)
-print("Initial shape: ", sample_datapoint.shape)
-embedding = PatchEmbedding(in_channels=1)
-embedding = embedding.forward(sample_datapoint)
-print("Patches shape: ", embedding.shape)
+        # Classification head
+        self.head = nn.Sequential(nn.LayerNorm(embedding_dim), nn.Linear(embedding_dim, out_dim))
+
+    def forward(self, img):
+        # Get patch embedding vectors
+        img = self.patch_embedding(img)
+        b, n, _ = img.shape
+
+        # Add positional embedding to the patches
+        cls_tokens = repeat(self.cls_token, '() n d -> b n d', b=b)
+        img = torch.cat([cls_tokens, img], dim=1)
+        img += self.pos_embedding[:, :(n + 1)]
+
+        # Transformer layers
+        for layer in self.layers:
+            img = layer(img)
+
+        # Classification head
+        assigned_class = self.head(img[:, 0, :])
+        return assigned_class
