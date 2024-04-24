@@ -1,8 +1,8 @@
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
-from torch.utils.data import random_split
+from tqdm import tqdm
 from ViT import *
 from Tester import *
 
@@ -24,12 +24,11 @@ epochs = 10
 for epoch in range(epochs):
     epoch_losses = []
     model.train()
-    for step, (input, labels) in enumerate(train_loader):
+    for step, (input, labels) in tqdm(enumerate(train_loader), desc=f"Epoch {epoch+1}", total=len(train_loader)):
         input, labels = input.to(device), labels.to(device)
         optimizer.zero_grad()
         output = model(input)
-        labels_one_hot = F.one_hot(labels, num_classes=8).float()
-        loss = criterion(output, labels_one_hot)
+        loss = criterion(output, labels.squeeze())
         loss.backward()
         optimizer.step()
         epoch_losses.append(loss.item())
@@ -38,8 +37,7 @@ for epoch in range(epochs):
     for step, (input, labels) in enumerate(test_loader):
         input, labels = input.to(device), labels.to(device)
         output = model(input)
-        labels_one_hot = F.one_hot(labels, num_classes=8).float()
-        loss = criterion(output, labels_one_hot)
+        loss = criterion(output, labels.squeeze())
         epoch_losses.append(loss.item())
     print(f"Epoch {epoch+1} - Testing loss: {np.mean(epoch_losses)}")
     
