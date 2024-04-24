@@ -162,4 +162,5 @@ cython_debug/
 # Unnecessary Hidden System Files
 .ipynb_checkpoints
 .DS_Store
+# My own
 /Transformer/oxford-iiit-pet
