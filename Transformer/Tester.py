@@ -109,9 +109,11 @@ def IntegratedSaveLoadTest(mode='save'):
         trainer.RunOptimiser(2)
         print('Model loaded succesfully.')
 
-'''
-RunOptimisationTest(PneumoniaMNIST, 1)
-RunOptimisationTest(RetinaMNIST, 1)
-RunOptimisationTest(ChestMNIST, 1)
-'''
-IntegratedSaveLoadTest('Load')
+
+if __name__ == '__main__':
+    # RunViT_Test()
+    # GPUAccessTest()
+    # RunOptimisationTest(RetinaMNIST)
+    # SaveModelTest()
+    # LoadModelTest()
+    IntegratedSaveLoadTest('Load')
