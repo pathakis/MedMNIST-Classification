@@ -5,7 +5,6 @@ import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 from ViT import *
-from Tester import *
 from torch.utils.data import DataLoader, random_split
 from ViT import *
 import torch
@@ -27,7 +26,6 @@ import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 from ViT import *
-from Tester import *
 import torcheval.metrics
 
 def SaveData(dataset, filename):

@@ -4,7 +4,7 @@
 
 from Library import *
 from ViT import *
-from Optimiser import *
+from Optimiser import ViT_Optimiser
 from medmnist import PneumoniaMNIST, RetinaMNIST, ChestMNIST
 
 def RunViT_Test():
@@ -69,6 +69,49 @@ def RunOptimisationTest(dataset, epochs=1):
     optimiser = ViT_Optimiser(dataset, epochs)
     optimiser.RunOptimiser(epochs, title=str(dataset.__name__))
 
+def SaveModelTest():
+    '''
+    Test saving and loading a model.
+    '''
+    trainer = ViT_Optimiser(RetinaMNIST)
+    trainer.RunOptimiser(2)
+    model = trainer.model
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    torch.save(model.state_dict(), 'Transformer/Models/RetinaModel.pth')
+    print(f'Model saved on device {device}. At location: Transformers/Models/RetinaModel.pth.')
+
+def LoadModelTest():
+    '''
+    Test loading a model.
+    '''
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    model = ViT().to(device)
+    model.load_state_dict(torch.load('Transformer/Models/RetinaModel.pth'))
+    model
+    print('Model loaded.')
+    trainer = ViT_Optimiser(RetinaMNIST, 2)
+    trainer.model = model
+    trainer.RunOptimiser(2)
+    print('Model loaded and tested.')
+
+def IntegratedSaveLoadTest(mode='save'):
+    '''
+    Test saving and loading a model using the integrated functions.
+    '''
+    if mode == 'save':
+        trainer = ViT_Optimiser(RetinaMNIST)
+        trainer.RunOptimiser(2)
+        trainer.SaveModel(trainer.dataset.__name__)
+        print('Model saved succesfully.')
+    elif mode == 'Load':
+        trainer = ViT_Optimiser(RetinaMNIST)
+        trainer.LoadModel(trainer.dataset.__name__)
+        trainer.RunOptimiser(2)
+        print('Model loaded succesfully.')
+
+'''
 RunOptimisationTest(PneumoniaMNIST, 1)
 RunOptimisationTest(RetinaMNIST, 1)
 RunOptimisationTest(ChestMNIST, 1)
+'''
+IntegratedSaveLoadTest('Load')
