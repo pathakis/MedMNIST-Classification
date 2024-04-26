@@ -6,6 +6,7 @@ from Library import *
 from ViT import *
 from Optimiser import ViT_Optimiser
 from medmnist import PneumoniaMNIST, RetinaMNIST, ChestMNIST
+import time
 
 def RunViT_Test():
     # Test normalisation class / layer
@@ -67,7 +68,7 @@ def RunOptimisationTest(dataset, epochs=1):
     Test the ViT optimiser class.
     '''
     optimiser = ViT_Optimiser(dataset, epochs)
-    optimiser.RunOptimiser(epochs, title=str(dataset.__name__))
+    optimiser.RunOptimiser(epochs)
 
 def SaveModelTest():
     '''
@@ -111,9 +112,14 @@ def IntegratedSaveLoadTest(mode='save'):
 
 
 if __name__ == '__main__':
-    # RunViT_Test()
-    # GPUAccessTest()
-    # RunOptimisationTest(RetinaMNIST)
-    # SaveModelTest()
-    # LoadModelTest()
+    st = time.time()
+    RunViT_Test()
+    GPUAccessTest()
+    RunOptimisationTest(RetinaMNIST)
+    SaveModelTest()
+    LoadModelTest()
+    IntegratedSaveLoadTest('save')
     IntegratedSaveLoadTest('Load')
+
+    print('\n'*3,'#'*50)
+    print(f'\n\n\nTests completed in {time.time() - st:.2f} seconds.\n\n\n')
