@@ -8,7 +8,6 @@ import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 from ViT import *
-from Tester import *
 from torch.utils.data import DataLoader, random_split
 from ViT import *
 import torch
@@ -43,6 +42,7 @@ class ViT_Optimiser:
 
         # Load training and validation data
         self.LoadDatasets(dataset)
+        self.dataset = dataset
         
         self.model = ViT().to(self.device)
         
@@ -62,8 +62,8 @@ class ViT_Optimiser:
         self.test = dataset(split='test', download=True, size=224, as_rgb=True, transform=Compose([Resize((224, 224)), ToTensor()]))
         self.test_loader = DataLoader(self.test, batch_size=32, shuffle=True)
     
-    def RunOptimiser(self, epochs, title):
-        print(f"Running optimiser for {epochs} epochs on {title} dataset...")
+    def RunOptimiser(self, epochs):
+        print(f"Running optimiser for {epochs} epochs on {str(self.dataset.__name__)} dataset...")
 
         for epoch in range(epochs):
             epoch_losses = { "training": [], "validation": []}
@@ -93,3 +93,18 @@ class ViT_Optimiser:
             output = self.model(input)
             loss = self.trainingCriterion(output, labels.squeeze())
         print(f"Epoch {epoch+1} - Testing loss: {loss.item()}")
+
+    def SaveModel(self, filename):
+        directory = 'Transformer/Models'
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        
+        filepath = os.path.join(directory, filename + '.pth')
+        
+        torch.save(self.model.state_dict(), filepath)
+        print(f"Model saved to '{filepath}'.")
+
+    def LoadModel(self, filename):
+        path = 'Transformer/Models/' + filename + '.pth'
+        self.model.load_state_dict(torch.load(path))
+        print(f"Model loaded from '{path}'.")
