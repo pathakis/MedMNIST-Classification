@@ -1,4 +1,5 @@
 from Preprocessing import *
+from sklearn.metrics import accuracy_score, roc_auc_score, f1_score
 from ViT import *
 from torch import nn
 from torch.utils.data import DataLoader
@@ -7,11 +8,12 @@ from tqdm import tqdm
 import albumentations as A
 import numpy as np
 import os
+import pickle
 import torch
 import torch.optim as optim
 
 class ViT_Optimiser:
-    def __init__(self, dataset, img_size=224, augment_data=False, balance_classes=False,model=None, optimizer=None, trainingcriterion=None, testcriterion=None):
+    def __init__(self, dataset, img_size=224, augment_data=False):
         self.device = "mps" if torch.backends.mps.is_available() else "cpu"
         print(f' > Using device: {self.device}\n')
         if self.device == "cpu":
@@ -22,15 +24,21 @@ class ViT_Optimiser:
         # Parameters
         self.img_size = int(img_size)
         self.augment_data = augment_data
-        self.balance_classes = balance_classes
-        print(self.img_size)
-
 
         # Load training and validation data
         self.LoadDatasets(dataset)
         self.dataset = dataset
-        
-        self.model = ViT().to(self.device)
+        self.LoadPerformance()
+        print(self.modelPerformance)
+        if str(dataset.__name__) not in self.modelPerformance:
+            self.modelPerformance[str(dataset.__name__)] = {'Training': {'Accuracy': 0, 'F1': 0}, 'Validation': {'Accuracy': 0, 'F1': 0}, 'Testing': {'Accuracy': 0, 'F1': 0}, 'Model': 'ViT', 'Loss function': 'CrossEntropyLoss'}
+            print(self.modelPerformance)
+            self.SavePerformance()
+
+        # Define model
+        self.model = ViT(out_dim=self.num_classes).to(self.device)
+        if str(dataset.__name__) in self.modelPerformance:
+            self.LoadModel(dataset.__name__)
         
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
         
@@ -60,8 +68,9 @@ class ViT_Optimiser:
                 ToTensor()]
                 )
         standardTransformer = Compose([Resize((self.img_size, self.img_size)), ToTensor()])
-        self.training = MedMNISTDataset(dataset, transform=trainingTransformer, dataset_type='train', img_size=self.img_size, augment_data=self.augment_data, balance_classes=self.balance_classes)
+        self.training = MedMNISTDataset(dataset, transform=trainingTransformer, dataset_type='train', img_size=self.img_size, augment_data=self.augment_data, balance_classes=True)
         self.train_loader = DataLoader(self.training, batch_size=32, shuffle=True)
+        self.num_classes = self.training.num_classes
 
         self.validation = MedMNISTDataset(dataset, transform=standardTransformer, dataset_type='val', img_size=self.img_size)
         self.validation_loader = DataLoader(self.validation, batch_size=32, shuffle=True)
@@ -86,6 +95,8 @@ class ViT_Optimiser:
                 loss.backward()
                 self.optimizer.step()
                 epoch_losses["training"].append(loss.item())
+            
+            trainingPerformance = self.EvaluatePerformance(output, labels.squeeze())
 
             # Run model over validation data
             for step, (input, labels) in enumerate(self.validation_loader):
@@ -93,16 +104,48 @@ class ViT_Optimiser:
                 output = self.model(input)
                 loss = self.trainingCriterion(output, labels.squeeze())
                 epoch_losses["validation"].append(loss.item())
-        
-            print(f"\nEpoch {epoch+1}\n   - Training loss: {np.mean(epoch_losses['training'])}\n   - Validation loss: {np.mean(epoch_losses['validation'])}\n\n")
 
-        for step, (input, labels) in enumerate(self.test_loader):
-            input, labels = input.to(self.device), labels.to(self.device)
-            output = self.model(input)
-            loss = self.trainingCriterion(output, labels.squeeze())
-        print(f"Epoch {epoch+1} - Testing loss: {loss.item()}")
+            validationPerformance = self.EvaluatePerformance(output, labels.squeeze())
+
+            print(f'\nEpoch {epoch+1}/{epochs}\n')
+            print(f'   Training set:')
+            print(f'      - Loss: {np.mean(epoch_losses["training"]):.2f} | Accuracy: {trainingPerformance["Accuracy"]:.2f} | F1: {trainingPerformance["F1"]:.2f}')
+            print(f'   Validation set:')
+            print(f'      - Loss: {np.mean(epoch_losses["validation"]):.2f} | Accuracy: {validationPerformance["Accuracy"]:.2f} | F1: {validationPerformance["F1"]:.2f}')
+        
+            #print(f"\nEpoch {epoch+1}\n   - Training loss: {np.mean(epoch_losses['training'])}\n   - Validation loss: {np.mean(epoch_losses['validation'])}\n\n")
+
+            if ((epoch % 5 == 0) and (epoch != 0)) or (epoch == epochs-1):
+                for step, (input, labels) in enumerate(self.test_loader):
+                    input, labels = input.to(self.device), labels.to(self.device)
+                    output = self.model(input)
+                    loss = self.trainingCriterion(output, labels.squeeze())
+
+                testPerformance = self.EvaluatePerformance(output, labels.squeeze())
+                print(f'   Test set:')
+                print(f'      - Loss: {loss.item():.2f} | Accuracy: {testPerformance["Accuracy"]:.2f} | F1: {testPerformance["F1"]:.2f}')
+
+                # If model has better performance on test set than previous runs, save model
+                if testPerformance["Accuracy"] > self.modelPerformance[str(self.dataset.__name__)]['Testing']['Accuracy']:
+                    self.modelPerformance[str(self.dataset.__name__)]['Testing'] = testPerformance
+                    self.modelPerformance[str(self.dataset.__name__)]['Training'] = trainingPerformance
+                    self.modelPerformance[str(self.dataset.__name__)]['Validation'] = validationPerformance
+                    self.SavePerformance()
+                    self.SaveModel(self.dataset.__name__)
+
+    def EvaluatePerformance(self, output, labels):
+        # Make predictions available on CPU
+        output_np = output.detach().cpu().numpy()
+        labels_np = labels.detach().cpu().numpy()
+        output_np = np.argmax(output_np, axis=1)
+
+        # Calculate performance metrics
+        accuracy = accuracy_score(labels_np, output_np)                 # Calculate accuracy
+        f1 = f1_score(labels_np, output_np, average='macro')            # Calculate F1 score
+        return {'Accuracy': accuracy, 'F1': f1}
 
     def SaveModel(self, filename):
+        print("Saving model...")
         directory = 'Transformer/Models'
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -113,6 +156,17 @@ class ViT_Optimiser:
         print(f"Model saved to '{filepath}'.")
 
     def LoadModel(self, filename):
+        print("Loading model...")
         path = 'Transformer/Models/' + filename + '.pth'
         self.model.load_state_dict(torch.load(path))
         print(f"Model loaded from '{path}'.")
+
+    def SavePerformance(self):
+        path = 'Transformer/Models/Performance.pkl'
+        with open(path, 'wb') as file:
+            pickle.dump(self.modelPerformance, file)
+
+    def LoadPerformance(self):
+        with open('Transformer/Models/Performance.pkl', 'rb') as file:
+            self.modelPerformance = pickle.load(file)
+        

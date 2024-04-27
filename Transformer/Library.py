@@ -1,5 +1,4 @@
-# We will store all the functions that are used in the main file here. This will help us keep the main file clean and easy to read.
-#from Optimiser import ViT_Optimiser
+# Trash program to save old functions and classes that are no longer used but have a potential future use.
 from ViT import *
 from Optimiser import ViT_Optimiser
 from einops import rearrange
@@ -44,3 +43,37 @@ def LoadData(filename):
         dataset = pickle.load(file)
     print(f"Data loaded from '{path}'.")
     return dataset
+
+class Augment:
+    def __init__(self, transforms):
+        self.transforms = transforms
+
+    def __call__(self, image):
+        for t in self.transforms:
+            image = t(image=image)["image"]
+        return image
+    
+class Augmenter:
+    def __init__(self) -> None:
+        pass
+
+class Compose:
+    def __init__(self, transforms):
+        self.transforms = transforms
+
+    def __call__(self, img):
+        for transform in self.transforms:
+            img = transform(image=img)['image']
+        return img
+    
+class Augment:
+    '''
+    Class for augmenting images using the Albumentations library. It will only augment a specific image and not affect class balance or dataset size.
+    '''
+    def __init__(self, transforms):
+        self.transforms = transforms
+
+    def __call__(self, img):
+        for transform in self.transforms:
+            img = transform(image=img)['image']
+        return img

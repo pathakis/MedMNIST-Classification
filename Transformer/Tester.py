@@ -41,7 +41,7 @@ def RunViT_Test():
 
     # Test ViT model
     print('Testing ViT model...')
-    model = ViT()
+    model = ViT(out_dim=5)
     print(model)
     print(model(torch.rand(1, 3, 224, 224)))
     print('ViT model test passed.')
@@ -68,7 +68,7 @@ def RunOptimisationTest(dataset, augment,balance_classes, epochs=2):
     '''
     Test the ViT optimiser class.
     '''
-    optimiser = ViT_Optimiser(dataset, augment_data=augment, img_size=224, balance_classes=balance_classes)
+    optimiser = ViT_Optimiser(dataset, augment_data=augment, img_size=224)
     optimiser.RunOptimiser(epochs)
 
 def SaveModelTest():
