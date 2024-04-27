@@ -11,7 +11,7 @@ import torch
 import torch.optim as optim
 
 class ViT_Optimiser:
-    def __init__(self, dataset, img_size=224, augment_data=False, model=None, optimizer=None, trainingcriterion=None, testcriterion=None):
+    def __init__(self, dataset, img_size=224, augment_data=False, balance_classes=False,model=None, optimizer=None, trainingcriterion=None, testcriterion=None):
         self.device = "mps" if torch.backends.mps.is_available() else "cpu"
         print(f' > Using device: {self.device}\n')
         if self.device == "cpu":
@@ -22,6 +22,7 @@ class ViT_Optimiser:
         # Parameters
         self.img_size = int(img_size)
         self.augment_data = augment_data
+        self.balance_classes = balance_classes
         print(self.img_size)
 
 
@@ -59,7 +60,7 @@ class ViT_Optimiser:
                 ToTensor()]
                 )
         standardTransformer = Compose([Resize((self.img_size, self.img_size)), ToTensor()])
-        self.training = MedMNISTDataset(dataset, transform=trainingTransformer, dataset_type='train', img_size=self.img_size, augment_data=self.augment_data)
+        self.training = MedMNISTDataset(dataset, transform=trainingTransformer, dataset_type='train', img_size=self.img_size, augment_data=self.augment_data, balance_classes=self.balance_classes)
         self.train_loader = DataLoader(self.training, batch_size=32, shuffle=True)
 
         self.validation = MedMNISTDataset(dataset, transform=standardTransformer, dataset_type='val', img_size=self.img_size)
