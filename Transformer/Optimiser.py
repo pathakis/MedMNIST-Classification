@@ -1,44 +1,29 @@
-from Library import *
-from torcheval.metrics import MulticlassAccuracy
-from torchvision.transforms import Resize, ToTensor
-import os
-import pickle
-import torch.optim as optim
-import torch.nn.functional as F
-import numpy as np
-from tqdm import tqdm
+from Preprocessing import *
 from ViT import *
-from torch.utils.data import DataLoader, random_split
-from ViT import *
-import torch
-import tensorflow as tf
-from einops import rearrange
 from torch import nn
-from einops.layers.torch import Rearrange
-from torch import Tensor
-import torch
-import matplotlib.pyplot as plt
-from random import random
+from torch.utils.data import DataLoader
 from torchvision.transforms import Resize, ToTensor
-from torchvision.transforms.functional import to_pil_image
-from einops import repeat
-from medmnist import PneumoniaMNIST
-from torch.utils.data import DataLoader, random_split
-import torch.optim as optim
-import torch.nn.functional as F
-import numpy as np
 from tqdm import tqdm
-from ViT import *
-import torcheval.metrics
+import albumentations as A
+import numpy as np
+import os
+import torch
+import torch.optim as optim
 
 class ViT_Optimiser:
-    def __init__(self, dataset, model=None, optimizer=None, trainingcriterion=None, testcriterion=None):
+    def __init__(self, dataset, img_size=224, augment_data=False, model=None, optimizer=None, trainingcriterion=None, testcriterion=None):
         self.device = "mps" if torch.backends.mps.is_available() else "cpu"
         print(f' > Using device: {self.device}\n')
         if self.device == "cpu":
             print("WARNING: MPS not available, using CPU instead.")
-            if input("Continue? (y/n): ") == "n":
+            if input("Continue? (y/n): ") != "y":
                 exit()
+
+        # Parameters
+        self.img_size = int(img_size)
+        self.augment_data = augment_data
+        print(self.img_size)
+
 
         # Load training and validation data
         self.LoadDatasets(dataset)
@@ -51,16 +36,39 @@ class ViT_Optimiser:
         self.trainingCriterion = nn.CrossEntropyLoss()
 
         #self.testCriterion = nn.Accuracy()
-
+    
     def LoadDatasets(self, dataset):
-        self.training = dataset(split='train', download=True, size=224, as_rgb=True, transform=Compose([Resize((224, 224)), ToTensor()]))
+        if self.augment_data:
+            print("Augmenting data...")
+            trainingTransformer = Augment([
+                    A.Rotate(limit=30, p=0.5),              # Rotate the image by up to 30 degrees with a probability of 0.5
+                    A.RandomScale(scale_limit=0.2, p=0.5),  # Randomly scale the image by up to 20% with a probability of 0.5
+                    A.RandomBrightnessContrast(p=0.5),      # Randomly adjust brightness and contrast with a probability of 0.5
+                    A.GaussianBlur(p=0.5),                  # Apply Gaussian blur with a probability of 0.5
+                    #A.RandomNoise(p=0.5),                   # Add random noise with a probability of 0.5
+                    A.HorizontalFlip(p=0.5),                # Flip the image horizontally with a probability of 0.5
+                    A.VerticalFlip(p=0.5),                  # Flip the image vertically with a probability of 0.5
+                    A.RandomCrop(height=224, width=224),    # Randomly crop the image to size 224x224
+                    A.GridDistortion(p=0.5),                # Apply grid distortion with a probability of 0.5
+                    A.Resize(height=self.img_size, width=self.img_size),   # Resize the image to the desired size
+                    A.Normalize(),                          # Normalize the image
+                    ToTensor()                              # Convert the image to a PyTorch tensor
+                    ])
+        else:
+            trainingTransformer = Compose([
+                Resize((self.img_size, self.img_size)), 
+                ToTensor()]
+                )
+       
+        self.training = dataset(split='train', download=True, size=self.img_size, as_rgb=True, transform=trainingTransformer)
         self.train_loader = DataLoader(self.training, batch_size=32, shuffle=True)
-
-        self.validation = dataset(split='val', download=True, size=224, as_rgb=True, transform=Compose([Resize((224, 224)), ToTensor()]))
+        print('Augmentation complete')
+        self.validation = dataset(split='val', download=True, size=self.img_size, as_rgb=True, transform=Compose([Resize((self.img_size, self.img_size)), ToTensor()]))
         self.validation_loader = DataLoader(self.validation, batch_size=32, shuffle=True)
 
-        self.test = dataset(split='test', download=True, size=224, as_rgb=True, transform=Compose([Resize((224, 224)), ToTensor()]))
+        self.test = dataset(split='test', download=True, size=self.img_size, as_rgb=True, transform=Compose([Resize((self.img_size, self.img_size)), ToTensor()]))
         self.test_loader = DataLoader(self.test, batch_size=32, shuffle=True)
+        print('Data loaded')
     
     def RunOptimiser(self, epochs):
         print(f"Running optimiser for {epochs} epochs on {str(self.dataset.__name__)} dataset...")

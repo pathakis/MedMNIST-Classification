@@ -1,31 +1,29 @@
-import os
-import pickle
-import torch.optim as optim
-import torch.nn.functional as F
-import numpy as np
-from tqdm import tqdm
+# We will store all the functions that are used in the main file here. This will help us keep the main file clean and easy to read.
+#from Optimiser import ViT_Optimiser
 from ViT import *
-from torch.utils.data import DataLoader, random_split
-from ViT import *
-import torch
-import tensorflow as tf
+from Optimiser import ViT_Optimiser
 from einops import rearrange
-from torch import nn
+from einops import repeat
 from einops.layers.torch import Rearrange
-from torch import Tensor
-import torch
-import matplotlib.pyplot as plt
+from medmnist import PneumoniaMNIST
+from medmnist import PneumoniaMNIST, RetinaMNIST, ChestMNIST
 from random import random
+from torch import Tensor
+from torch import nn
+from torch.utils.data import DataLoader, random_split
+from torcheval.metrics import MulticlassAccuracy
 from torchvision.transforms import Resize, ToTensor
 from torchvision.transforms.functional import to_pil_image
-from einops import repeat
-from medmnist import PneumoniaMNIST
-from torch.utils.data import DataLoader, random_split
-import torch.optim as optim
-import torch.nn.functional as F
-import numpy as np
 from tqdm import tqdm
-from ViT import *
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import pickle
+import tensorflow as tf
+import time
+import torch
+import torch.nn.functional as F
+import torch.optim as optim
 import torcheval.metrics
 
 def SaveData(dataset, filename):

@@ -8,6 +8,7 @@ from Optimiser import ViT_Optimiser
 from medmnist import PneumoniaMNIST, RetinaMNIST, ChestMNIST
 import time
 
+
 def RunViT_Test():
     # Test normalisation class / layer
     print('\nTesting normalisation PreNorm class...')
@@ -63,18 +64,18 @@ def GPUAccessTest():
     x = torch.rand(size=(3,4)).to(device)
     print(f" > Tensor: {x}")
 
-def RunOptimisationTest(dataset, epochs=1):
+def RunOptimisationTest(dataset, epochs=2):
     '''
     Test the ViT optimiser class.
     '''
-    optimiser = ViT_Optimiser(dataset, epochs)
+    optimiser = ViT_Optimiser(dataset, augment_data=True, img_size=224)
     optimiser.RunOptimiser(epochs)
 
 def SaveModelTest():
     '''
     Test saving and loading a model.
     '''
-    trainer = ViT_Optimiser(RetinaMNIST)
+    trainer = ViT_Optimiser(RetinaMNIST, augment_data=True)
     trainer.RunOptimiser(2)
     model = trainer.model
     device = "mps" if torch.backends.mps.is_available() else "cpu"
@@ -100,12 +101,12 @@ def IntegratedSaveLoadTest(mode='save'):
     Test saving and loading a model using the integrated functions.
     '''
     if mode == 'save':
-        trainer = ViT_Optimiser(RetinaMNIST)
+        trainer = ViT_Optimiser(RetinaMNIST, augment_data=False, img_size=224)
         trainer.RunOptimiser(2)
         trainer.SaveModel(trainer.dataset.__name__)
         print('Model saved succesfully.')
     elif mode == 'Load':
-        trainer = ViT_Optimiser(RetinaMNIST)
+        trainer = ViT_Optimiser(RetinaMNIST, augment_data=True)
         trainer.LoadModel(trainer.dataset.__name__)
         trainer.RunOptimiser(2)
         print('Model loaded succesfully.')
@@ -113,13 +114,13 @@ def IntegratedSaveLoadTest(mode='save'):
 
 if __name__ == '__main__':
     st = time.time()
-    RunViT_Test()
-    GPUAccessTest()
-    RunOptimisationTest(RetinaMNIST)
-    SaveModelTest()
-    LoadModelTest()
-    IntegratedSaveLoadTest('save')
-    IntegratedSaveLoadTest('Load')
+    #RunViT_Test()
+    #GPUAccessTest()
+    RunOptimisationTest(RetinaMNIST, 2)
+    #SaveModelTest()
+    #LoadModelTest()
+    #IntegratedSaveLoadTest('save')
+    #IntegratedSaveLoadTest('Load')
 
     print('\n'*3,'#'*50)
     print(f'\n\n\nTests completed in {time.time() - st:.2f} seconds.\n\n\n')

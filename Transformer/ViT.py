@@ -1,11 +1,19 @@
 # Written by Oscar Rosman
 # Date: 2024-04-24
+from ViT import *
+from einops import repeat
+from einops.layers.torch import Rearrange
+from torch import Tensor
+from torch import nn
+import torch
 
+'''
 from torch import nn
 from einops.layers.torch import Rearrange
 from torch import Tensor
 import torch
 from einops import repeat
+'''
 
 class Attention(nn.Module):
     def __init__(self, dim, heads, dropout):
@@ -46,7 +54,13 @@ class Compose(object):
 
     def __call__(self, image):
         for t in self.transforms:
-            image = t(image)
+            if hasattr(t, "is_albumentation"):
+                # If the transform is an Albumentations transform, apply it
+                image = t(image=image)["image"]
+            else:
+                # If it's a torchvision transform, apply it
+                image = t(image)
+            #image = t(image=image)
         return image
 
 
