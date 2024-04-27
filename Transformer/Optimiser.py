@@ -68,17 +68,6 @@ class ViT_Optimiser:
 
         self.test = MedMNISTDataset(dataset, transform=standardTransformer, dataset_type='test', img_size=self.img_size)
         self.test_loader = DataLoader(self.test, batch_size=32, shuffle=True)
-        '''
-        self.training = dataset(split='train', download=True, size=self.img_size, as_rgb=True, transform=trainingTransformer)
-        self.train_loader = DataLoader(self.training, batch_size=32, shuffle=True)
-        print('Augmentation complete')
-        self.validation = dataset(split='val', download=True, size=self.img_size, as_rgb=True, transform=Compose([Resize((self.img_size, self.img_size)), ToTensor()]))
-        self.validation_loader = DataLoader(self.validation, batch_size=32, shuffle=True)
-
-        self.test = dataset(split='test', download=True, size=self.img_size, as_rgb=True, transform=Compose([Resize((self.img_size, self.img_size)), ToTensor()]))
-        self.test_loader = DataLoader(self.test, batch_size=32, shuffle=True)
-        print('Data loaded')
-        '''
     
     def RunOptimiser(self, epochs):
         print(f"Running optimiser for {epochs} epochs on {str(self.dataset.__name__)} dataset...")

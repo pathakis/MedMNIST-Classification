@@ -116,7 +116,7 @@ if __name__ == '__main__':
     st = time.time()
     #RunViT_Test()
     #GPUAccessTest()
-    RunOptimisationTest(RetinaMNIST, True, False, 2)
+    RunOptimisationTest(RetinaMNIST, True, True, 2)
     #SaveModelTest()
     #LoadModelTest()
     #IntegratedSaveLoadTest('save')

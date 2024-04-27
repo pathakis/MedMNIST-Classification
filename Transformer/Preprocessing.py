@@ -43,15 +43,16 @@ class MedMNISTDataset(Dataset):
 
     def BalanceClasses(self):
         '''
-        Balance the classes in the dataset.
+        Balance the classes in the dataset by resampling the minority classes. For the best efftect
+        augmentation should be enabled. Otherwise the same image will be duplicated within the dataset.
         '''
-        if not self.augment_data:
-            raise Exception("Cannot balance classes without augmenting the data.")
+        print('Balancing classes...')
         
         # Get the number of samples in each class
         num_samples = {}
         for _, label in self.dataset:
             label = label[0]
+            #print(f'Label: {label}', type(label))
             if label not in num_samples:
                 num_samples[label] = 0
             num_samples[label] += 1
@@ -59,66 +60,51 @@ class MedMNISTDataset(Dataset):
 
         # Find the class with the most samples
         max_samples = max(num_samples.values())
-        print('Max samples: ', max_samples)
+        
+        # Create a balanced dataset
         balanced_dataset = []
-
-        # Find indicies of each class
-        class_indices = {}
-        for label in num_samples:
-            class_indices[label] = [idx for idx, (_, l) in enumerate(self.dataset) if l == label]
-        #print('Class indices: ', class_indices)
-        # Select indicies to resample
-        for label in num_samples.keys():
-            print(f'Label 2: {label}', type(label))
-            if num_samples[label] < max_samples:
-                class_indices[label] = np.random.choice(class_indices[label], max_samples-len(class_indices))
-
-        # Resample the dataset
-        for idx, (image, label) in enumerate(self.dataset):
+        for image, label in self.dataset:
             balanced_dataset.append((image, label))
-            if num_samples[label] < max_samples:
-                if idx in class_indices[label]:
-                    image = np.asarray(image)
-                    image = self.transform(image=image)["image"]
-                    if type(image) != torch.Tensor:
-                        image = ToTensor()(image)
+
+        # Resample minority classes
+        for label, count in num_samples.items():
+            if count < max_samples:
+                # Number of samples to add
+                num_to_add = max_samples - count
+
+                # Get indices of samples in the minority class
+                class_indices = [idx for idx, (_, l) in enumerate(self.dataset) if l == label]
+
+                # Select indices to resample
+                selected_indices = np.random.choice(class_indices, num_to_add, replace=True)
+
+                for idx in selected_indices:
+                    image, label = self.dataset[idx]
                     balanced_dataset.append((image, label))
         self.dataset = balanced_dataset
         
+        # Control the balance
         num_samples = {}
         for _, label in self.dataset:
+            label = label[0]
             if label not in num_samples:
                 num_samples[label] = 0
             num_samples[label] += 1
         print('After balancing: ', num_samples)
-
-
-
+        
     def __len__(self):
         return len(self.dataset)
     
     def __getitem__(self, idx):
+        '''
+        Get an item from the dataset, if augmention is enabled, augment the data.
+        '''
         image, label = self.dataset[idx]
         if self.augment_data and type(image) != torch.Tensor:
             image = np.asarray(image)
             image = self.transform(image=image)["image"]
             if type(image) != torch.Tensor:
                 image = ToTensor()(image)
-        '''
-        if self.transform is not None and type(image) != torch.Tensor:
-            if self.augment_data:
-                #print('Augmenting data: ',type(image))
-                image = np.asarray(image)
-                image = self.transform(image=image)["image"]
-            else:
-                #print('Standard transform', type(image))
-                image = self.transform(image)
-        #print(type(image))
-        if type(image) != torch.Tensor:
-            image = ToTensor()(image)
-            #print(' -> ', type(image))
-        print(type(image))
-        '''
         return image, label
     
 class CatsVsDogsDataset(Dataset):
