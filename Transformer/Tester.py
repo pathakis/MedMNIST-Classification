@@ -64,11 +64,11 @@ def GPUAccessTest():
     x = torch.rand(size=(3,4)).to(device)
     print(f" > Tensor: {x}")
 
-def RunOptimisationTest(dataset, epochs=2):
+def RunOptimisationTest(dataset, augment,epochs=2):
     '''
     Test the ViT optimiser class.
     '''
-    optimiser = ViT_Optimiser(dataset, augment_data=True, img_size=224)
+    optimiser = ViT_Optimiser(dataset, augment_data=augment, img_size=224)
     optimiser.RunOptimiser(epochs)
 
 def SaveModelTest():
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     st = time.time()
     #RunViT_Test()
     #GPUAccessTest()
-    RunOptimisationTest(RetinaMNIST, 2)
+    RunOptimisationTest(RetinaMNIST, True, 2)
     #SaveModelTest()
     #LoadModelTest()
     #IntegratedSaveLoadTest('save')

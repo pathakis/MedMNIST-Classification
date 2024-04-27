@@ -40,7 +40,7 @@ class ViT_Optimiser:
     def LoadDatasets(self, dataset):
         if self.augment_data:
             print("Augmenting data...")
-            trainingTransformer = Augment([
+            trainingTransformer = A.Compose([
                     A.Rotate(limit=30, p=0.5),              # Rotate the image by up to 30 degrees with a probability of 0.5
                     A.RandomScale(scale_limit=0.2, p=0.5),  # Randomly scale the image by up to 20% with a probability of 0.5
                     A.RandomBrightnessContrast(p=0.5),      # Randomly adjust brightness and contrast with a probability of 0.5
@@ -48,18 +48,26 @@ class ViT_Optimiser:
                     #A.RandomNoise(p=0.5),                   # Add random noise with a probability of 0.5
                     A.HorizontalFlip(p=0.5),                # Flip the image horizontally with a probability of 0.5
                     A.VerticalFlip(p=0.5),                  # Flip the image vertically with a probability of 0.5
-                    A.RandomCrop(height=224, width=224),    # Randomly crop the image to size 224x224
+                    #A.RandomCrop(height=224, width=224),    # Randomly crop the image to size 224x224
                     A.GridDistortion(p=0.5),                # Apply grid distortion with a probability of 0.5
                     A.Resize(height=self.img_size, width=self.img_size),   # Resize the image to the desired size
-                    A.Normalize(),                          # Normalize the image
-                    ToTensor()                              # Convert the image to a PyTorch tensor
+                    A.Normalize(),                          # Normalize the image                             # Convert the image to a PyTorch tensor
                     ])
         else:
             trainingTransformer = Compose([
                 Resize((self.img_size, self.img_size)), 
                 ToTensor()]
                 )
-       
+        standardTransformer = Compose([Resize((self.img_size, self.img_size)), ToTensor()])
+        self.training = MedMNISTDataset(dataset, transform=trainingTransformer, dataset_type='train', img_size=self.img_size, augment_data=self.augment_data)
+        self.train_loader = DataLoader(self.training, batch_size=32, shuffle=True)
+
+        self.validation = MedMNISTDataset(dataset, transform=standardTransformer, dataset_type='val', img_size=self.img_size)
+        self.validation_loader = DataLoader(self.validation, batch_size=32, shuffle=True)
+
+        self.test = MedMNISTDataset(dataset, transform=standardTransformer, dataset_type='test', img_size=self.img_size)
+        self.test_loader = DataLoader(self.test, batch_size=32, shuffle=True)
+        '''
         self.training = dataset(split='train', download=True, size=self.img_size, as_rgb=True, transform=trainingTransformer)
         self.train_loader = DataLoader(self.training, batch_size=32, shuffle=True)
         print('Augmentation complete')
@@ -69,6 +77,7 @@ class ViT_Optimiser:
         self.test = dataset(split='test', download=True, size=self.img_size, as_rgb=True, transform=Compose([Resize((self.img_size, self.img_size)), ToTensor()]))
         self.test_loader = DataLoader(self.test, batch_size=32, shuffle=True)
         print('Data loaded')
+        '''
     
     def RunOptimiser(self, epochs):
         print(f"Running optimiser for {epochs} epochs on {str(self.dataset.__name__)} dataset...")
@@ -81,6 +90,7 @@ class ViT_Optimiser:
             for step, (input, labels) in tqdm(enumerate(self.train_loader), desc=f"Epoch {epoch+1}", total=len(self.train_loader)):
                 input, labels = input.to(self.device), labels.to(self.device)
                 self.optimizer.zero_grad()
+                #print(input.shape)
                 output = self.model(input)
                 loss = self.trainingCriterion(output, labels.squeeze())
                 loss.backward()
