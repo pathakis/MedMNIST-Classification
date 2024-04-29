@@ -17,9 +17,11 @@ class ViT_Optimiser:
         self.device = "mps" if torch.backends.mps.is_available() else "cpu"
         print(f' > Using device: {self.device}\n')
         if self.device == "cpu":
-            print("WARNING: MPS not available, using CPU instead.")
-            if input("Continue? (y/n): ") != "y":
-                exit()
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            if self.device == "cpu":
+                print("WARNING: MPS not available, using CPU instead.")
+                if input("Continue? (y/n): ") != "y":
+                    exit()
 
         # Parameters
         self.img_size = int(img_size)
@@ -31,14 +33,17 @@ class ViT_Optimiser:
         self.LoadPerformance()
         print(self.modelPerformance)
         if str(dataset.__name__) not in self.modelPerformance:
-            self.modelPerformance[str(dataset.__name__)] = {'Training': {'Accuracy': 0, 'F1': 0}, 'Validation': {'Accuracy': 0, 'F1': 0}, 'Testing': {'Accuracy': 0, 'F1': 0}, 'Model': 'ViT', 'Loss function': 'CrossEntropyLoss'}
+            self.modelPerformance[str(dataset.__name__)] = {'Training': {'Accuracy': 0, 'F1': 0}, 'Validation': {'Accuracy': 0, 'F1': 0}, 'Model': 'ViT', 'Loss function': 'CrossEntropyLoss'}
             print(self.modelPerformance)
             self.SavePerformance()
 
         # Define model
         self.model = ViT(out_dim=self.num_classes).to(self.device)
-        if str(dataset.__name__) in self.modelPerformance:
-            self.LoadModel(dataset.__name__)
+        try:
+            if str(dataset.__name__) in self.modelPerformance:
+                self.LoadModel(dataset.__name__)
+        except:
+            print("No model found, training new model...")
         
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
         
@@ -84,6 +89,12 @@ class ViT_Optimiser:
         for epoch in range(epochs):
             epoch_losses = { "training": [], "validation": []}
             self.model.train()
+            collected_training_output = []
+            collected_validation_output = []
+            collected_test_output = []
+            collected_training_labels = []
+            collected_validation_labels = []
+            collected_test_labels = []
 
             # Optimise model on training data
             for step, (input, labels) in tqdm(enumerate(self.train_loader), desc=f"Epoch {epoch+1}", total=len(self.train_loader)):
@@ -92,51 +103,57 @@ class ViT_Optimiser:
                 #print(input.shape)
                 output = self.model(input)
                 loss = self.trainingCriterion(output, labels.squeeze())
+                collected_training_output += output.tolist()
+                collected_training_labels += labels.squeeze().tolist()
                 loss.backward()
                 self.optimizer.step()
                 epoch_losses["training"].append(loss.item())
             
-            trainingPerformance = self.EvaluatePerformance(output, labels.squeeze())
+            trainingPerformance = self.EvaluatePerformance(collected_training_output, collected_training_labels)
 
             # Run model over validation data
             for step, (input, labels) in enumerate(self.validation_loader):
                 input, labels = input.to(self.device), labels.to(self.device)
                 output = self.model(input)
+                collected_validation_output += output.tolist()
+                collected_validation_labels += labels.squeeze().tolist()
                 loss = self.trainingCriterion(output, labels.squeeze())
                 epoch_losses["validation"].append(loss.item())
 
-            validationPerformance = self.EvaluatePerformance(output, labels.squeeze())
+            validationPerformance = self.EvaluatePerformance(collected_validation_output, collected_validation_labels)
 
             print(f'\nEpoch {epoch+1}/{epochs}\n')
-            print(f'   Training set:')
-            print(f'      - Loss: {np.mean(epoch_losses["training"]):.2f} | Accuracy: {trainingPerformance["Accuracy"]:.2f} | F1: {trainingPerformance["F1"]:.2f}')
-            print(f'   Validation set:')
-            print(f'      - Loss: {np.mean(epoch_losses["validation"]):.2f} | Accuracy: {validationPerformance["Accuracy"]:.2f} | F1: {validationPerformance["F1"]:.2f}')
+            print(f'   Training set:\n')
+            print(f'      - Loss: {np.mean(epoch_losses["training"]):.2f} | Accuracy: {trainingPerformance["Accuracy"]:.2f} | F1: {trainingPerformance["F1"]:.2f}\n')
+            print(f'   Validation set:\n')
+            print(f'      - Loss: {np.mean(epoch_losses["validation"]):.2f} | Accuracy: {validationPerformance["Accuracy"]:.2f} | F1: {validationPerformance["F1"]:.2f}\n')
+
+            # If model has better performance on validation set than previous runs, save model
+            if validationPerformance["Accuracy"] > self.modelPerformance[str(self.dataset.__name__)]['Validation']['Accuracy']:
+                self.modelPerformance[str(self.dataset.__name__)]['Training'] = trainingPerformance
+                self.modelPerformance[str(self.dataset.__name__)]['Validation'] = validationPerformance
+                self.SavePerformance()
+                self.SaveModel(self.dataset.__name__)
         
             #print(f"\nEpoch {epoch+1}\n   - Training loss: {np.mean(epoch_losses['training'])}\n   - Validation loss: {np.mean(epoch_losses['validation'])}\n\n")
 
-            if ((epoch % 5 == 0) and (epoch != 0)) or (epoch == epochs-1):
-                for step, (input, labels) in enumerate(self.test_loader):
-                    input, labels = input.to(self.device), labels.to(self.device)
-                    output = self.model(input)
-                    loss = self.trainingCriterion(output, labels.squeeze())
+        for step, (input, labels) in enumerate(self.test_loader):
+            input, labels = input.to(self.device), labels.to(self.device)
+            output = self.model(input)
+            collected_test_output += output.tolist()
+            collected_test_labels += labels.squeeze().tolist()
+            loss = self.trainingCriterion(output, labels.squeeze())
 
-                testPerformance = self.EvaluatePerformance(output, labels.squeeze())
-                print(f'   Test set:')
-                print(f'      - Loss: {loss.item():.2f} | Accuracy: {testPerformance["Accuracy"]:.2f} | F1: {testPerformance["F1"]:.2f}')
-
-                # If model has better performance on test set than previous runs, save model
-                if testPerformance["Accuracy"] > self.modelPerformance[str(self.dataset.__name__)]['Testing']['Accuracy']:
-                    self.modelPerformance[str(self.dataset.__name__)]['Testing'] = testPerformance
-                    self.modelPerformance[str(self.dataset.__name__)]['Training'] = trainingPerformance
-                    self.modelPerformance[str(self.dataset.__name__)]['Validation'] = validationPerformance
-                    self.SavePerformance()
-                    self.SaveModel(self.dataset.__name__)
+        testPerformance = self.EvaluatePerformance(collected_test_output, collected_test_labels)
+        print(f'   Test set:')
+        print(f'      - Loss: {loss.item():.2f} | Accuracy: {testPerformance["Accuracy"]:.2f} | F1: {testPerformance["F1"]:.2f}')
 
     def EvaluatePerformance(self, output, labels):
         # Make predictions available on CPU
-        output_np = output.detach().cpu().numpy()
-        labels_np = labels.detach().cpu().numpy()
+        output_np = np.array(output)
+        labels_np = np.array(labels)
+        #output_np = output.detach().cpu().numpy()
+        #labels_np = labels.detach().cpu().numpy()
         output_np = np.argmax(output_np, axis=1)
 
         # Calculate performance metrics

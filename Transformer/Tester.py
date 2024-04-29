@@ -123,4 +123,6 @@ if __name__ == '__main__':
     #IntegratedSaveLoadTest('Load')
 
     print('\n'*3,'#'*50)
-    print(f'\n\n\nTests completed in {time.time() - st:.2f} seconds.\n\n\n')
+    print(f'\n\n\nTests completed in {(time.time() - st)//60:.1f} minutes and {(time.time() - st)%60} seconds.\n\n\n')
+
+RunOptimisationTest(RetinaMNIST, True, True, 150)

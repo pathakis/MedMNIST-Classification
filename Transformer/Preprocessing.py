@@ -13,16 +13,6 @@ class Compose(object):
         for t in self.transforms:
             image = t(image)
         return image
-'''    
-class Augment:
-    def __init__(self, transforms):
-        self.transforms = transforms
-
-    def __call__(self, image):
-        for t in self.transforms:
-            image = t(image=image)["image"]
-        return image
-'''
     
 class MedMNISTDataset(Dataset):
     def __init__(self, dataset, transform=None, dataset_type='train', img_size=224, nSamples=0,augment_data=False, balance_classes=False):
