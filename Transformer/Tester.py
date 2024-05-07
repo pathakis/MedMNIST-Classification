@@ -7,6 +7,44 @@ from ViT import *
 from Optimiser import ViT_Optimiser
 from medmnist import PneumoniaMNIST, RetinaMNIST, ChestMNIST
 import time
+from PIL import Image
+from Preprocessing import *
+import torchvision
+
+"""
+self, channels=3,  # Number of channels in the input image (Grayscale = 1, RGB = 3)
+img_size=224, 
+patch_size=4,  # Size of the patches to be extracted from the input image (Think of mini images within image or kenel snapshots)
+embedding_dim=32, 
+layers=6, 
+out_dim=37, 
+dropout=0.1, 
+heads=2
+print()
+
+# Og image
+train_images = MedMNISTDataset(RetinaMNIST)
+im = train_images.__getitem__(1)[0]
+im = im.resize((224,224))
+plt.imshow(im)
+plt.show()
+
+#Show og image as 14x14 patches
+fig = plt.figure(figsize=(8, 8))
+img = np.asarray(im)
+patchSize = 4
+width = int(224//patchSize)
+for i in range(0, width**2):
+    x = i % width
+    y = i // width
+    patch = img[y*patchSize:(y+1)*patchSize, x*patchSize:(x+1)*patchSize]
+    ax = fig.add_subplot(width, width, i+1)
+    ax.axes.get_xaxis().set_visible(False)
+    ax.axes.get_yaxis().set_visible(False)
+    ax.imshow(patch)
+plt.show()
+"""
+
 
 
 def RunViT_Test():
@@ -113,16 +151,18 @@ def IntegratedSaveLoadTest(mode='save'):
 
 
 if __name__ == '__main__':
-    st = time.time()
+    pass
+    #st = time.time()
     #RunViT_Test()
     #GPUAccessTest()
-    RunOptimisationTest(RetinaMNIST, True, True, 2)
+    #RunOptimisationTest(RetinaMNIST, True, True, 2)
     #SaveModelTest()
     #LoadModelTest()
     #IntegratedSaveLoadTest('save')
     #IntegratedSaveLoadTest('Load')
 
-    print('\n'*3,'#'*50)
-    print(f'\n\n\nTests completed in {(time.time() - st)//60:.1f} minutes and {(time.time() - st)%60} seconds.\n\n\n')
+    #print('\n'*3,'#'*50)
+    #print(f'\n\n\nTests completed in {(time.time() - st)//60:.1f} minutes and {(time.time() - st)%60} seconds.\n\n\n')
 
 #RunOptimisationTest(PneumoniaMNIST, True, True, 2)
+RunViT_Test()

@@ -21,4 +21,4 @@ def ClassifyImage(dataset, image):
     print(predictions)
 
 ClassifyImage(RetinaMNIST, None)
-    
+

@@ -4,6 +4,9 @@ from ViT import ViT
 from Preprocessing import *
 from tqdm import tqdm
 import albumentations as A
+from PIL import Image
+import einops
+import matplotlib.pyplot as plt
 
 class ViT_Classifier:
     def __init__(self, dataset, subsets, augment_data=False, img_size=224):
@@ -79,3 +82,12 @@ class ViT_Classifier:
 class EvaluationMetrics:
     def __init__(self):
         pass
+
+    def VisualizeAttention(self):
+        sonjasAttentionWeights = np.zeros((6,7,8,9)) # BEHÖVER HJÄLP, HUR KOMMER JAG ÅT DET AKTUELLA ATTENTION-LAGRET (ETT OBJEKT FRÅN KLASS ATTENTION)
+        attention_weights = einops.rearrange(sonjasAttentionWeights, 'b h p p -> b h (p p)')
+        attention_map = attention_weights.mean(dim=1).squeeze().numpy()
+        heatmap = np.nanmax(attention_map, axis=0)
+        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+        plt.axis('off')
+        plt.show()
