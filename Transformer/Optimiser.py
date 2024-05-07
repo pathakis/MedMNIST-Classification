@@ -34,7 +34,7 @@ class ViT_Optimiser:
         self.LoadPerformance()
         print(self.modelPerformance)
         if self.filename not in self.modelPerformance:
-            self.modelPerformance[self.filename] = {'Training': {'Accuracy': 0, 'F1': 0}, 'Validation': {'Accuracy': 0, 'F1': 0}, 'Model': 'ViT', 'Loss function': 'CrossEntropyLoss'}
+            self.modelPerformance[self.filename] = {'Training': {'Accuracy': 0, 'F1': 0}, 'Validation': {'Accuracy': 0, 'F1': 0}, 'Model': 'ViT', 'Loss function': 'CrossEntropyLoss', 'Classes': self.num_classes}
             print(self.modelPerformance)
             self.SavePerformance()
 
@@ -77,6 +77,7 @@ class ViT_Optimiser:
         self.training = MedMNISTDataset(dataset, transform=trainingTransformer, dataset_type='train', img_size=self.img_size, augment_data=self.augment_data, balance_classes=True)
         self.train_loader = DataLoader(self.training, batch_size=32, shuffle=True)
         self.num_classes = self.training.num_classes
+        print(f'Num classes: {self.num_classes}')
 
         self.validation = MedMNISTDataset(dataset, transform=standardTransformer, dataset_type='val', img_size=self.img_size)
         self.validation_loader = DataLoader(self.validation, batch_size=32, shuffle=True)

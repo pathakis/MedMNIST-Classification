@@ -7,6 +7,7 @@ from ViT import *
 from Optimiser import ViT_Optimiser
 from medmnist import PneumoniaMNIST, RetinaMNIST, ChestMNIST
 import time
+import pickle, os
 
 
 def RunViT_Test():
@@ -111,16 +112,25 @@ def IntegratedSaveLoadTest(mode='save'):
         trainer.RunOptimiser(2)
         print('Model loaded succesfully.')
 
+def CreatePerformanceFile():
+    path = 'Transformer/Models/'
+    filename = 'Performance.pkl'
+    if not os.path.exists(path):
+        os.makedirs(path)
+    with open(path + filename, 'wb') as file:
+        pickle.dump({}, file)
+    print(f'\nPerformance file created at {path + filename}.')
 
 if __name__ == '__main__':
     st = time.time()
-    #RunViT_Test()
+    RunViT_Test()
     #GPUAccessTest()
-    RunOptimisationTest(RetinaMNIST, True, True, 2)
+    #RunOptimisationTest(RetinaMNIST, True, True, 1)
     #SaveModelTest()
     #LoadModelTest()
     #IntegratedSaveLoadTest('save')
     #IntegratedSaveLoadTest('Load')
+    #CreatePerformanceFile()
 
     print('\n'*3,'#'*50)
     print(f'\n\n\nTests completed in {(time.time() - st)//60:.1f} minutes and {(time.time() - st)%60} seconds.\n\n\n')
