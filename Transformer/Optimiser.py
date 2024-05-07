@@ -28,20 +28,21 @@ class ViT_Optimiser:
         self.augment_data = augment_data
 
         # Load training and validation data
+        self.filename = f'{dataset.__name__}{self.img_size}'
         self.LoadDatasets(dataset)
         self.dataset = dataset
         self.LoadPerformance()
         print(self.modelPerformance)
-        if str(dataset.__name__) not in self.modelPerformance:
-            self.modelPerformance[str(dataset.__name__)] = {'Training': {'Accuracy': 0, 'F1': 0}, 'Validation': {'Accuracy': 0, 'F1': 0}, 'Model': 'ViT', 'Loss function': 'CrossEntropyLoss'}
+        if self.filename not in self.modelPerformance:
+            self.modelPerformance[self.filename] = {'Training': {'Accuracy': 0, 'F1': 0}, 'Validation': {'Accuracy': 0, 'F1': 0}, 'Model': 'ViT', 'Loss function': 'CrossEntropyLoss'}
             print(self.modelPerformance)
             self.SavePerformance()
 
         # Define model
         self.model = ViT(out_dim=self.num_classes).to(self.device)
         try:
-            if str(dataset.__name__) in self.modelPerformance:
-                self.LoadModel(dataset.__name__)
+            if self.filename in self.modelPerformance:
+                self.LoadModel()
         except:
             print("No model found, training new model...")
         
@@ -100,7 +101,6 @@ class ViT_Optimiser:
             for step, (input, labels) in tqdm(enumerate(self.train_loader), desc=f"Epoch {epoch+1}", total=len(self.train_loader)):
                 input, labels = input.to(self.device), labels.to(self.device)
                 self.optimizer.zero_grad()
-                #print(input.shape)
                 output = self.model(input)
                 loss = self.trainingCriterion(output, labels.squeeze())
                 collected_training_output += output.tolist()
@@ -129,14 +129,13 @@ class ViT_Optimiser:
             print(f'      - Loss: {np.mean(epoch_losses["validation"]):.2f} | Accuracy: {validationPerformance["Accuracy"]:.2f} | F1: {validationPerformance["F1"]:.2f}\n')
 
             # If model has better performance on validation set than previous runs, save model
-            if validationPerformance["Accuracy"] > self.modelPerformance[str(self.dataset.__name__)]['Validation']['Accuracy']:
-                self.modelPerformance[str(self.dataset.__name__)]['Training'] = trainingPerformance
-                self.modelPerformance[str(self.dataset.__name__)]['Validation'] = validationPerformance
+            if validationPerformance["Accuracy"] > self.modelPerformance[self.filename]['Validation']['Accuracy']:
+                self.modelPerformance[self.filename]['Training'] = trainingPerformance
+                self.modelPerformance[self.filename]['Validation'] = validationPerformance
                 self.SavePerformance()
-                self.SaveModel(self.dataset.__name__)
+                self.SaveModel()
         
-            #print(f"\nEpoch {epoch+1}\n   - Training loss: {np.mean(epoch_losses['training'])}\n   - Validation loss: {np.mean(epoch_losses['validation'])}\n\n")
-
+        # Run model over test data
         for step, (input, labels) in enumerate(self.test_loader):
             input, labels = input.to(self.device), labels.to(self.device)
             output = self.model(input)
@@ -161,23 +160,25 @@ class ViT_Optimiser:
         f1 = f1_score(labels_np, output_np, average='macro')            # Calculate F1 score
         return {'Accuracy': accuracy, 'F1': f1}
 
-    def SaveModel(self, filename):
+    def SaveModel(self):
         print("Saving model...")
         directory = 'Transformer/Models'
         if not os.path.exists(directory):
             os.makedirs(directory)
         
-        filepath = os.path.join(directory, filename + '.pth')
+        filepath = os.path.join(directory, self.filename + '.pth')
         
         torch.save(self.model.state_dict(), filepath)
         print(f"Model saved to '{filepath}'.")
 
-    def LoadModel(self, filename):
-        print("Loading model...")
-        path = 'Transformer/Models/' + filename + '.pth'
+    def LoadModel(self):
+        path = 'Transformer/Models/' + self.filename + '.pth'
         self.model.load_state_dict(torch.load(path))
-        print(f"Model loaded from '{path}'.")
-
+        print(f"\nModel loaded from '{path}'.")
+        for testPerformance in self.modelPerformance[self.filename].keys():
+            print(f' > {testPerformance}: {self.modelPerformance[self.filename][testPerformance]}')
+        print('\n')
+            
     def SavePerformance(self):
         path = 'Transformer/Models/Performance.pkl'
         with open(path, 'wb') as file:
