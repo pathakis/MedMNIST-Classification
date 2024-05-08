@@ -47,7 +47,7 @@ augment_data = True
 balance_classes = True
 dataset_size_increase = 10000
 img_size = 28
-run_type = 'optimise' # 'optimise', 'classify_image', 'classify_dataset'
+run_type = 'classify_dataset' # 'optimise', 'classify_image', 'classify_dataset'
 
 if run_type == 'classify_image':
     # Set the image here

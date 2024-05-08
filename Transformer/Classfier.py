@@ -38,7 +38,7 @@ class ViT_Classifier:
         path = 'Transformer/Models/'
         filename = f'{self.dataset.__name__}{self.img_size}'
 
-        with open(path + 'Performance.pkl', 'rb') as file:
+        with open(path + 'ModelInfo.pkl', 'rb') as file:
             self.modelInfo = pickle.load(file)
 
         self.model = ViT(out_dim=self.modelInfo[filename]['Classes']).to(self.device)

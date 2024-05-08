@@ -45,7 +45,7 @@ class ViTOptimiser:
         self.LoadViT()
 
         # Training parameters
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)      # Optimiser
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.01)      # Optimiser
         self.criterion = nn.CrossEntropyLoss()                              # Loss function
 
     def LoadDatasets(self):
@@ -112,6 +112,14 @@ class ViTOptimiser:
         if os.path.exists(modelInfoPath):
             with open(modelInfoPath, 'rb') as f:
                 self.modelInfo = pickle.load(f)
+
+            if self.filename not in self.modelInfo:
+                self.modelInfo[self.filename] = {'Training': {'Accuracy': 0, 'F1': 0, 'Loss': 1000}, 
+                                                 'Validation': {'Accuracy': 0, 'F1': 0, 'Loss': 1000}, 
+                                                 'Test': {'Accuracy': 0, 'F1': 0, 'Loss': 1000}, 
+                                                 'Model': 'ViT', 
+                                                 'Loss function': 'CrossEntropyLoss', 
+                                                 'Classes': self.num_classes}
         else:
             self.modelInfo = {}
             self.modelInfo[self.filename] = {'Training': {'Accuracy': 0, 'F1': 0, 'Loss': 1000}, 
