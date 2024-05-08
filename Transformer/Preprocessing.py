@@ -20,6 +20,18 @@ class MedMNISTDataset(Dataset):
         self.transform = transform
         self.augment_data = augment_data
         self.increaseSize = nSamples
+        ####### Clean up
+        
+        num_samples = {}
+        for _, label in self.dataset:
+            label = label[0]
+            #print(f'Label: {label}', type(label))
+            if label not in num_samples:
+                num_samples[label] = 0
+            num_samples[label] += 1
+        self.num_classes = len(num_samples)
+        #########
+        
         if augment_data == False:
             self.Transform()
 
@@ -59,7 +71,7 @@ class MedMNISTDataset(Dataset):
                 max_samples = max(num_samples.values())
             else:
                 max_samples = int(increaseSize / len(num_samples))
-                print(len(num_samples), increaseSize, increaseSize / len(num_samples), int(increaseSize / len(num_samples)))
+                #print(len(num_samples), increaseSize, increaseSize / len(num_samples), int(increaseSize / len(num_samples)))
                 print(f'Increasing size to {max_samples} samples per class.')
         else:
             max_samples = max(num_samples.values())

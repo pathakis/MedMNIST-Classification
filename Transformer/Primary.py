@@ -1,15 +1,27 @@
 from ViT import *
 from Classfier import *
 from Optimiser import *
+from NewOptimiser import *
 from Preprocessing import *
 from medmnist import PneumoniaMNIST, RetinaMNIST
+import time
 
-def OptimiseViT(dataset, augment_data, epochs, img_size=224):
+def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0):
     '''
     Optimise the Vision Transformer model.
     '''
-    optimiser = ViT_Optimiser(dataset, augment_data=augment_data,img_size=img_size)
-    optimiser.RunOptimiser(epochs)
+    # Old optimiser
+    #optimiser = ViT_Optimiser(dataset, augment_data=augment_data,img_size=img_size, increaseSize=dataset_size)
+    #optimiser.RunOptimiser(epochs)
+
+    # New optimiser
+    optimiser = ViTOptimiser(dataset, 
+                             augment_data=augment,
+                             increaseSize=increaseSize,
+                             balance_classes=balance,
+                             img_size=img_size)
+    
+    optimiser.RunOptimiser(epochs, verboseInterval=2)
 
 def ClassifyImage(classifier, image):
     '''
@@ -31,9 +43,11 @@ def ClassifyDataset(classifier):
 dataset = PneumoniaMNIST
 epochs = 200
 subsets = ['train', 'test'] # 'train', 'val', 'test'
-augment_data = False
+augment_data = True
+balance_classes = True
+dataset_size_increase = 10000
 img_size = 28
-run_type = 'classify_dataset' # 'optimise', 'classify_image', 'classify_dataset'
+run_type = 'optimise' # 'optimise', 'classify_image', 'classify_dataset'
 
 if run_type == 'classify_image':
     # Set the image here
@@ -48,13 +62,15 @@ if run_type != 'optimise':
 
 ##################################################################################################
 # Modify the code below to test the classifier
-
+st = time.time()
 if run_type == 'optimise':
-    OptimiseViT(dataset, augment_data,epochs, img_size)
+    OptimiseViT(dataset, augment_data, balance_classes, epochs, img_size, dataset_size_increase)
 elif run_type == 'classify_image':
     prediction = ClassifyImage(classifier, image)
     print(f'Prediction: {prediction}')
 elif run_type == 'classify_dataset':
     ClassifyDataset(classifier)
+
+print(f'Execution time: {(time.time() - st)//60:.0f} minutes and {(time.time() - st)%60:.0f} seconds.')
 
 

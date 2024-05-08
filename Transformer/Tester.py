@@ -5,6 +5,7 @@
 from Library import *
 from ViT import *
 from Optimiser import ViT_Optimiser
+from NewOptimiser import ViTOptimiser
 from medmnist import PneumoniaMNIST, RetinaMNIST, ChestMNIST
 import time
 import pickle, os
@@ -44,7 +45,7 @@ def RunViT_Test():
     print('Testing ViT model...')
     model = ViT(out_dim=5)
     print(model)
-    print(model(torch.rand(1, 3, 224, 224)))
+    print(model(torch.ones(1, 3, 224, 224)))
     print('ViT model test passed.')
 
 def GPUAccessTest():
@@ -65,11 +66,16 @@ def GPUAccessTest():
     x = torch.rand(size=(3,4)).to(device)
     print(f" > Tensor: {x}")
 
-def RunOptimisationTest(dataset, augment,balance_classes, epochs=2):
+def RunOptimisationTest(dataset, augment,balance_classes, epochs=2, img_size=224, increaseSize=0):
     '''
-    Test the ViT optimiser class.
+    Test the ViT optimiser class.s
     '''
-    optimiser = ViT_Optimiser(dataset, augment_data=augment, img_size=224)
+    # Old optimiser
+    #optimiser = ViT_Optimiser(dataset, augment_data=augment, img_size=224)
+    #optimiser.RunOptimiser(epochs)
+
+    # New optimiser
+    optimiser = ViTOptimiser(dataset, augment_data=augment, increaseSize=increaseSize, balance_classes=balance_classes, img_size=img_size)
     optimiser.RunOptimiser(epochs)
 
 def SaveModelTest():
@@ -123,9 +129,9 @@ def CreatePerformanceFile():
 
 if __name__ == '__main__':
     st = time.time()
-    RunViT_Test()
+    #RunViT_Test()
     #GPUAccessTest()
-    #RunOptimisationTest(RetinaMNIST, True, True, 1)
+    RunOptimisationTest(PneumoniaMNIST, True, True, 6, 28, 0)
     #SaveModelTest()
     #LoadModelTest()
     #IntegratedSaveLoadTest('save')

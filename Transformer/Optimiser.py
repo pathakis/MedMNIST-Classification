@@ -13,7 +13,7 @@ import torch
 import torch.optim as optim
 
 class ViT_Optimiser:
-    def __init__(self, dataset, img_size=224, augment_data=False):
+    def __init__(self, dataset, img_size=224, augment_data=False, increaseSize=0):
         self.device = "mps" if torch.backends.mps.is_available() else "cpu"
         print(f' > Using device: {self.device}\n')
         if self.device == "cpu":
@@ -29,7 +29,7 @@ class ViT_Optimiser:
 
         # Load training and validation data
         self.filename = f'{dataset.__name__}{self.img_size}'
-        self.LoadDatasets(dataset)
+        self.LoadDatasets(dataset, increaseSize)
         self.dataset = dataset
         self.LoadPerformance()
         print(self.modelPerformance)
@@ -52,7 +52,7 @@ class ViT_Optimiser:
 
         #self.testCriterion = nn.Accuracy()
     
-    def LoadDatasets(self, dataset):
+    def LoadDatasets(self, dataset, increaseSize=0):
         if self.augment_data:
             print("Augmenting data...")
             trainingTransformer = A.Compose([
@@ -74,12 +74,12 @@ class ViT_Optimiser:
                 ToTensor()]
                 )
         standardTransformer = Compose([Resize((self.img_size, self.img_size)), ToTensor()])
-        self.training = MedMNISTDataset(dataset, transform=trainingTransformer, dataset_type='train', img_size=self.img_size, augment_data=self.augment_data, balance_classes=True)
+        self.training = MedMNISTDataset(dataset, transform=trainingTransformer, dataset_type='train', img_size=self.img_size, augment_data=self.augment_data, balance_classes=True, nSamples=increaseSize)
         self.train_loader = DataLoader(self.training, batch_size=32, shuffle=True)
         self.num_classes = self.training.num_classes
         print(f'Num classes: {self.num_classes}')
 
-        self.validation = MedMNISTDataset(dataset, transform=standardTransformer, dataset_type='val', img_size=self.img_size)
+        self.validation = MedMNISTDataset(dataset, transform=trainingTransformer, dataset_type='val', img_size=self.img_size, augment_data=self.augment_data, balance_classes=True, nSamples=int(increaseSize*0.1))
         self.validation_loader = DataLoader(self.validation, batch_size=32, shuffle=True)
 
         self.test = MedMNISTDataset(dataset, transform=standardTransformer, dataset_type='test', img_size=self.img_size)
