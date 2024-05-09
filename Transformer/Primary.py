@@ -6,7 +6,7 @@ from Preprocessing import *
 from medmnist import PneumoniaMNIST, RetinaMNIST
 import time
 
-def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0):
+def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0, batch_size=32):
     '''
     Optimise the Vision Transformer model.
     '''
@@ -19,7 +19,8 @@ def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0)
                              augment_data=augment,
                              increaseSize=increaseSize,
                              balance_classes=balance,
-                             img_size=img_size)
+                             img_size=img_size, 
+                             batch_size=batch_size)
     
     optimiser.RunOptimiser(epochs, verboseInterval=2)
 
@@ -46,8 +47,9 @@ subsets = ['train', 'test'] # 'train', 'val', 'test'
 augment_data = True
 balance_classes = True
 dataset_size_increase = 10000
-img_size = 28
-run_type = 'classify_dataset' # 'optimise', 'classify_image', 'classify_dataset'
+img_size = 224
+batch_size = 128
+run_type = 'optimise' # 'optimise', 'classify_image', 'classify_dataset'
 
 if run_type == 'classify_image':
     # Set the image here
@@ -64,7 +66,7 @@ if run_type != 'optimise':
 # Modify the code below to test the classifier
 st = time.time()
 if run_type == 'optimise':
-    OptimiseViT(dataset, augment_data, balance_classes, epochs, img_size, dataset_size_increase)
+    OptimiseViT(dataset, augment_data, balance_classes, epochs, img_size, dataset_size_increase, batch_size)
 elif run_type == 'classify_image':
     prediction = ClassifyImage(classifier, image)
     print(f'Prediction: {prediction}')

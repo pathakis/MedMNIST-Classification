@@ -14,7 +14,7 @@ import torch.optim as optim
 
 
 class ViTOptimiser:
-    def __init__(self, dataset, img_size=224, augment_data=False, increaseSize=0, balance_classes=False, vit_patch_size=4):
+    def __init__(self, dataset, img_size=224, augment_data=False, increaseSize=0, balance_classes=False, vit_patch_size=4, batch_size=32):
         # Set the device
         self.device = "mps" if torch.backends.mps.is_available() else "cpu"
         if self.device == "cpu":
@@ -23,6 +23,7 @@ class ViTOptimiser:
                 print("WARNING: MPS not available, using CPU instead.")
                 if input("Continue? (y/n): ") != "y":
                     exit()
+        print(f"Using device: {self.device}")
 
         # General parameters
         self.img_size = int(img_size)
@@ -33,6 +34,7 @@ class ViTOptimiser:
 
         # Load datasets
         self.filename = f'{dataset.__name__}{self.img_size}'
+        self.batch_size = batch_size
         self.dataset = dataset
         self.LoadDatasets()
 
@@ -45,8 +47,9 @@ class ViTOptimiser:
         self.LoadViT()
 
         # Training parameters
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.01)      # Optimiser
-        self.criterion = nn.CrossEntropyLoss()                              # Loss function
+        #self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)                  # Optimiser
+        self.optimizer = optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)      # Alternative optimiser
+        self.criterion = nn.CrossEntropyLoss()                                          # Loss function
 
     def LoadDatasets(self):
         '''
@@ -56,12 +59,12 @@ class ViTOptimiser:
         self.loaders = {}
 
         augmentingTransformer = A.Compose([
-                    A.Rotate(limit=30, p=0.5),              # Rotate the image by up to 30 degrees with a probability of 0.5
-                    A.RandomScale(scale_limit=0.2, p=0.5),  # Randomly scale the image by up to 20% with a probability of 0.5
-                    A.RandomBrightnessContrast(p=0.5),      # Randomly adjust brightness and contrast with a probability of 0.5
+                    A.Rotate(limit=30, p=0.),              # Rotate the image by up to 30 degrees with a probability of 0.5
+                    A.RandomScale(scale_limit=0.2, p=0.),  # Randomly scale the image by up to 20% with a probability of 0.5
+                    A.RandomBrightnessContrast(p=0.),      # Randomly adjust brightness and contrast with a probability of 0.5
                     #A.GaussianBlur(p=0.5),                  # Apply Gaussian blur with a probability of 0.5
-                    A.HorizontalFlip(p=0.5),                # Flip the image horizontally with a probability of 0.5
-                    A.VerticalFlip(p=0.5),                  # Flip the image vertically with a probability of 0.5
+                    A.HorizontalFlip(p=0.),                # Flip the image horizontally with a probability of 0.5
+                    A.VerticalFlip(p=0.),                  # Flip the image vertically with a probability of 0.5
                     #A.GridDistortion(p=0.5),                # Apply grid distortion with a probability of 0.5
                     A.Resize(height=self.img_size, width=self.img_size),   # Resize the image to the desired size
                     A.Normalize(),                          # Normalize the image                             # Convert the image to a PyTorch tensor
@@ -87,6 +90,8 @@ class ViTOptimiser:
             else:
                 balance = self.balance_classes
                 sample_size = self.sample_size
+                if subset == 'val':
+                    sample_size *= 0.1
 
             self.datasets[subset] = MedMNISTDataset(self.dataset, 
                                                     transform=transformer, 
@@ -97,7 +102,7 @@ class ViTOptimiser:
                                                     nSamples=sample_size
                                                     )
             self.loaders[subset] = DataLoader(self.datasets[subset], 
-                                              batch_size=32, 
+                                              batch_size=self.batch_size, 
                                               shuffle=True)
         self.num_classes = self.datasets['train'].num_classes
             
@@ -213,26 +218,26 @@ class ViTOptimiser:
 
                 print(f'Epoch {epoch}/{epochs}:')
                 print(f'   Training set:')
-                print(f'      - Loss: {np.mean(epoch_losses["training"]):.4f} | Accuracy: {trainingPerformance["Accuracy"]:.2f} | F1: {trainingPerformance["F1"]:.2f}\n')
+                print(f'      - Loss: {np.mean(epoch_losses["training"]):.4f} | Accuracy: {trainingPerformance["Accuracy"]} | F1: {trainingPerformance["F1"]:.2f}\n')
                 print(f'   Validation set:')
-                print(f'      - Loss: {np.mean(epoch_losses["validation"]):.4f} | Accuracy: {validationPerformance["Accuracy"]:.2f} | F1: {validationPerformance["F1"]:.2f}\n')
+                print(f'      - Loss: {np.mean(epoch_losses["validation"]):.4f} | Accuracy: {validationPerformance["Accuracy"]} | F1: {validationPerformance["F1"]:.2f}\n')
 
-                if validationPerformance['Loss'] < self.modelInfo[self.filename]['Validation']['Loss']:
-                    print('Loss decreased on validation set, saving model...')
+                if validationPerformance['Accuracy'] > self.modelInfo[self.filename]['Validation']['Accuracy']:
+                    print('Accuracy increased on validation set, saving model...')
                     self.modelInfo[self.filename]['Training'] = trainingPerformance
                     self.modelInfo[self.filename]['Validation'] = validationPerformance
-                    testPerformance = self.RunTest()
+                    testPerformance = self.RunTest(verbose=False)
                     self.modelInfo[self.filename]['Test'] = testPerformance
                     self.SaveModelInformation()
                     self.SaveViT()
         
         print(f'\nTraining complete.\n')
-        testPerformance = self.RunTest()
+        testPerformance = self.RunTest(verbose=True)
         print(f'\nModel performance:')
         print(f'   Test set:')
         print(f'      - Loss: {testPerformance["Loss"]:.4f} | Accuracy: {testPerformance["Accuracy"]:.2f} | F1: {testPerformance["F1"]:.2f}\n')
 
-    def RunTest(self):
+    def RunTest(self, verbose=False):
         '''
         Run the test.
         '''
@@ -252,6 +257,16 @@ class ViTOptimiser:
         testPerformance = self.EvaluationMetrics(test_output, test_labels, test_losses)
         print(f'Test set:')
         print(f'   - Loss: {np.mean(test_losses):.2f} | Accuracy: {testPerformance["Accuracy"]:.2f} | F1: {testPerformance["F1"]:.2f}\n')
+        print(f'Model output:')
+
+        if verbose:
+            print(f'\nModel performance:')
+            for i, pred in enumerate(output):
+                pred = pred.detach().cpu().numpy()
+                print(f'   - Prediction: {np.argmax(pred)} | Truth: {test_labels[i]}')
+                if i == 10:
+                    break
+
         return testPerformance
 
 
