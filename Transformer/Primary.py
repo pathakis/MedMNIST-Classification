@@ -47,7 +47,7 @@ subsets = ['train', 'test'] # 'train', 'val', 'test'
 augment_data = True
 balance_classes = True
 dataset_size_increase = 10000
-img_size = 224
+img_size = 128
 batch_size = 128
 run_type = 'optimise' # 'optimise', 'classify_image', 'classify_dataset'
 

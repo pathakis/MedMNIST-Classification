@@ -48,7 +48,7 @@ class ViTOptimiser:
 
         # Training parameters
         #self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)                  # Optimiser
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)      # Alternative optimiser
+        self.optimizer = optim.SGD(self.model.parameters(), lr=0.0001, momentum=0.9)      # Alternative optimiser
         self.criterion = nn.CrossEntropyLoss()                                          # Loss function
 
     def LoadDatasets(self):
