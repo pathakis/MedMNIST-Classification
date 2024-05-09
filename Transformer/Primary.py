@@ -6,7 +6,7 @@ from Preprocessing import *
 from medmnist import PneumoniaMNIST, RetinaMNIST
 import time
 
-def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0, batch_size=32):
+def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0, batch_size=32, learningRate=0.01, schedulerStep=0):
     '''
     Optimise the Vision Transformer model.
     '''
@@ -22,7 +22,7 @@ def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0,
                              img_size=img_size, 
                              batch_size=batch_size)
     
-    optimiser.RunOptimiser(epochs, verboseInterval=2)
+    optimiser.RunOptimiser(epochs, verboseInterval=2, learningRate=1.0, optimiser='SGD', schedulerstep=0)
 
 def ClassifyImage(classifier, image):
     '''
@@ -42,13 +42,15 @@ def ClassifyDataset(classifier):
 ##################################################################################################
 # Change parameters here
 dataset = PneumoniaMNIST
-epochs = 200
+epochs = 1000
 subsets = ['train', 'test'] # 'train', 'val', 'test'
 augment_data = True
 balance_classes = True
 dataset_size_increase = 10000
 img_size = 128
 batch_size = 128
+schedulerStep = 0.1
+learningRate = 1.0
 run_type = 'optimise' # 'optimise', 'classify_image', 'classify_dataset'
 
 if run_type == 'classify_image':

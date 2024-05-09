@@ -11,6 +11,7 @@ import os
 import pickle
 import torch
 import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 
 
 class ViTOptimiser:
@@ -46,10 +47,6 @@ class ViTOptimiser:
                          ).to(self.device)          # Assign to GPU
         self.LoadViT()
 
-        # Training parameters
-        #self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)                  # Optimiser
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.0001, momentum=0.9)      # Alternative optimiser
-        self.criterion = nn.CrossEntropyLoss()                                          # Loss function
 
     def LoadDatasets(self):
         '''
@@ -179,17 +176,31 @@ class ViTOptimiser:
         f1 = f1_score(labels_np, output_np, average='macro')
         return {'Accuracy': accuracy, 'F1': f1, 'Loss': np.mean(losses)}
 
-    def RunOptimiser(self, epochs, verboseInterval=5):
+    def RunOptimiser(self, epochs, verboseInterval=5, learningRate=0.001, optimiser='Adam', schedulerstep=0):
         '''
         Run the optimiser.
         '''
         print(f'\nTraining model {self.filename} for {epochs} epochs...\n')
+        # Training parameters
+        if optimiser == 'Adam':
+            print(f'Using Adam optimiser with learning rate {learningRate}.')
+            self.optimizer = optim.Adam(self.model.parameters(), lr=learningRate)                               # Optimiser
+        else:
+            print(f'Using SGD optimiser with learning rate {learningRate} and momentum 0.9.')
+            self.optimizer = optim.SGD(self.model.parameters(), lr=learningRate, momentum=0.9)                  # Alternative optimiser
+        if schedulerstep > 0:
+            print(f'Using StepLR scheduler with step size {schedulerstep*epochs} and gamma 0.1 to decrease learning rate.')
+            self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=int(epochs*schedulerstep), gamma=0.1) # Scheduler
+
+        self.criterion = nn.CrossEntropyLoss()                                          # Loss function
         self.model.train()
 
         for epoch in range(epochs):
             epoch_losses = {'training': [], 'validation': []}
             epoch_output = []
             epoch_labels = []
+            if schedulerstep > 0:
+                self.scheduler.step()
 
             # Training
             for (images, labels) in tqdm(self.loaders['train'], desc=f'Epoch {epoch}/{epochs}', total=len(self.loaders['train'])):
@@ -257,7 +268,6 @@ class ViTOptimiser:
         testPerformance = self.EvaluationMetrics(test_output, test_labels, test_losses)
         print(f'Test set:')
         print(f'   - Loss: {np.mean(test_losses):.2f} | Accuracy: {testPerformance["Accuracy"]:.2f} | F1: {testPerformance["F1"]:.2f}\n')
-        print(f'Model output:')
 
         if verbose:
             print(f'\nModel performance:')
