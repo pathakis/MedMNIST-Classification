@@ -3,10 +3,10 @@ from Classfier import *
 from Optimiser import *
 from NewOptimiser import *
 from Preprocessing import *
-from medmnist import PneumoniaMNIST, RetinaMNIST
+from medmnist import PneumoniaMNIST, RetinaMNIST, DermaMNIST
 import time
 
-def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0, batch_size=32, learningRate=0.01, schedulerStep=0):
+def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0, batch_size=32, learningRate=0.01, schedulerStep=0, optimiser='Adam', patch_size=4):
     '''
     Optimise the Vision Transformer model.
     '''
@@ -20,9 +20,10 @@ def OptimiseViT(dataset, augment, balance, epochs, img_size=224, increaseSize=0,
                              increaseSize=increaseSize,
                              balance_classes=balance,
                              img_size=img_size, 
-                             batch_size=batch_size)
+                             batch_size=batch_size, 
+                             vit_patch_size=patch_size)
     
-    optimiser.RunOptimiser(epochs, verboseInterval=2, learningRate=1.0, optimiser='SGD', schedulerstep=0)
+    optimiser.RunOptimiser(epochs, verboseInterval=2, learningRate=learningRate, optimiser=optimiser, schedulerstep=schedulerStep)
 
 def ClassifyImage(classifier, image):
     '''
@@ -42,15 +43,17 @@ def ClassifyDataset(classifier):
 ##################################################################################################
 # Change parameters here
 dataset = PneumoniaMNIST
-epochs = 1000
+epochs = 20
 subsets = ['train', 'test'] # 'train', 'val', 'test'
 augment_data = True
 balance_classes = True
+patchSize = 7
 dataset_size_increase = 10000
-img_size = 128
-batch_size = 128
+img_size = 28
+batch_size = 64
 schedulerStep = 0.1
-learningRate = 1.0
+learningRate = .55
+optimiser = 'RMS' # 'Adam', 'SGD'
 run_type = 'optimise' # 'optimise', 'classify_image', 'classify_dataset'
 
 if run_type == 'classify_image':
@@ -68,7 +71,7 @@ if run_type != 'optimise':
 # Modify the code below to test the classifier
 st = time.time()
 if run_type == 'optimise':
-    OptimiseViT(dataset, augment_data, balance_classes, epochs, img_size, dataset_size_increase, batch_size)
+    OptimiseViT(dataset, augment_data, balance_classes, epochs, img_size, dataset_size_increase, batch_size, learningRate=learningRate, schedulerStep=schedulerStep, optimiser=optimiser)
 elif run_type == 'classify_image':
     prediction = ClassifyImage(classifier, image)
     print(f'Prediction: {prediction}')

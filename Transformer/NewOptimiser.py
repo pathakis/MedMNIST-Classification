@@ -12,6 +12,7 @@ import pickle
 import torch
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
+from collections import Counter
 
 
 class ViTOptimiser:
@@ -43,7 +44,10 @@ class ViTOptimiser:
         self.LoadModelInformation()
         self.model = ViT(img_size=img_size,         # Image size
                          patch_size=vit_patch_size, # Patch size, resolution at which the ViT model processes the image. Smaller gives higher precision at a larger computational cost.
-                         out_dim=self.num_classes   # Number of output classes
+                         out_dim=self.num_classes,  # Number of output classes
+                         heads=8, 
+                         dropout=0.2, 
+                         layers=3
                          ).to(self.device)          # Assign to GPU
         self.LoadViT()
 
@@ -143,6 +147,14 @@ class ViTOptimiser:
                 print(f'{key}: {self.modelInfo[self.filename][key]}')
         except:
             print('No model found, training new model...')
+            self.modelInfo[self.filename] = {'Training': {'Accuracy': 0, 'F1': 0, 'Loss': 1000}, 
+                                             'Validation': {'Accuracy': 0, 'F1': 0, 'Loss': 1000}, 
+                                             'Test': {'Accuracy': 0, 'F1': 0, 'Loss': 1000}, 
+                                             'Model': 'ViT', 
+                                             'Loss function': 'CrossEntropyLoss', 
+                                             'Classes': self.num_classes}
+            for key in self.modelInfo[self.filename]:
+                print(f'{key}: {self.modelInfo[self.filename][key]}')
 
     def SaveModelInformation(self):
         '''
@@ -183,13 +195,17 @@ class ViTOptimiser:
         print(f'\nTraining model {self.filename} for {epochs} epochs...\n')
         # Training parameters
         if optimiser == 'Adam':
-            print(f'Using Adam optimiser with learning rate {learningRate}.')
+            print(f'    > Using Adam optimiser with learning rate {learningRate}.\n')
             self.optimizer = optim.Adam(self.model.parameters(), lr=learningRate)                               # Optimiser
-        else:
-            print(f'Using SGD optimiser with learning rate {learningRate} and momentum 0.9.')
+        elif optimiser == 'SGD':
+            print(f'    > Using SGD optimiser with learning rate {learningRate} and momentum 0.9.\n')
             self.optimizer = optim.SGD(self.model.parameters(), lr=learningRate, momentum=0.9)                  # Alternative optimiser
+
+        else:
+            print(f'    > Using RMSprop optimiser with learning rate {learningRate}.\n')
+            self.optimizer = optim.RMSprop(self.model.parameters(), lr=learningRate, alpha=0.99, eps=1e-08)    # Alternative optimiser
         if schedulerstep > 0:
-            print(f'Using StepLR scheduler with step size {schedulerstep*epochs} and gamma 0.1 to decrease learning rate.')
+            print(f'    > Using StepLR scheduler with step size {schedulerstep*epochs} and gamma 0.1 to decrease learning rate.\n')
             self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=int(epochs*schedulerstep), gamma=0.1) # Scheduler
 
         self.criterion = nn.CrossEntropyLoss()                                          # Loss function
@@ -199,8 +215,6 @@ class ViTOptimiser:
             epoch_losses = {'training': [], 'validation': []}
             epoch_output = []
             epoch_labels = []
-            if schedulerstep > 0:
-                self.scheduler.step()
 
             # Training
             for (images, labels) in tqdm(self.loaders['train'], desc=f'Epoch {epoch}/{epochs}', total=len(self.loaders['train'])):
@@ -214,6 +228,9 @@ class ViTOptimiser:
                 epoch_output += output.tolist()
                 epoch_labels += labels.squeeze().tolist()
             
+            if schedulerstep > 0:
+                self.scheduler.step()
+                print(f'Learning rate: {self.scheduler.get_last_lr()}', end='\r')
             trainingPerformance = self.EvaluationMetrics(epoch_output, epoch_labels, epoch_losses['training'])
             if epoch % verboseInterval == 0:
 
@@ -271,6 +288,12 @@ class ViTOptimiser:
 
         if verbose:
             print(f'\nModel performance:')
+            cT = Counter(test_labels)
+            cP = Counter(np.argmax(np.array(test_output), axis=1))
+            print(f'   - Truth: {cT}')
+            print(f'   - Prediction: {cP}')
+
+
             for i, pred in enumerate(output):
                 pred = pred.detach().cpu().numpy()
                 print(f'   - Prediction: {np.argmax(pred)} | Truth: {test_labels[i]}')
