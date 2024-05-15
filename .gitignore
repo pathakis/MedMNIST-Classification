@@ -167,3 +167,4 @@ cython_debug/
 *.npz
 project/ViT/organA224.pth
 project/ViT/pneumonia224.pth
+.DS_Store
