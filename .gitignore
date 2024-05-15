@@ -162,3 +162,7 @@ cython_debug/
 # Unnecessary Hidden System Files
 .ipynb_checkpoints
 .DS_Store
+dermamnist_224.npz
+organamnist_224.npz
+*.npz
+/project
